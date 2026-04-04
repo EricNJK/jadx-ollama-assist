@@ -1,0 +1,53 @@
+plugins {
+    id 'java'
+    id 'jacoco'
+}
+
+group = 'des.ts'
+version = '1.5.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly libs.jadx.core
+
+    
+    // TOML parser (very small, no transitive junk)
+    implementation libs.tomlj
+
+    // Testing
+    testImplementation libs.junit.jupiter.api
+    testRuntimeOnly libs.junit.jupiter.engine
+    testRuntimeOnly libs.junit.platform.launcher
+}
+
+test {
+    useJUnitPlatform()
+}
+
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+javadoc {
+    options.encoding = 'UTF-8'
+}
+
+jar {
+    }
+
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        csv.required = true
+        html.required = true
+    }
+}
