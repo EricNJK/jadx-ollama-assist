@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'jacoco'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group = 'des.ts'
@@ -40,8 +41,11 @@ javadoc {
     options.encoding = 'UTF-8'
 }
 
-jar {
-    }
+shadowJar {
+    archiveBaseName.set('ollama-assist')
+    archiveVersion.set('1.5.0')
+    archiveClassifier.set('')
+}
 
 
 jacocoTestReport {
