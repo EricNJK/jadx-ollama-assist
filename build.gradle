@@ -1,10 +1,12 @@
 plugins {
     id 'java'
     id 'jacoco'
+    alias(libs.plugins.maven.publish) // Added for publishing
 }
 
+// These will be overridden by gradle.properties if it exists
 group = 'des.ts'
-version = '1.5.0'
+version = '1.5.1'
 
 repositories {
     mavenCentral()
@@ -12,12 +14,7 @@ repositories {
 
 dependencies {
     compileOnly libs.jadx.core
-
-    
-    // TOML parser (very small, no transitive junk)
     implementation libs.tomlj
-
-    // Testing
     testImplementation libs.junit.jupiter.api
     testRuntimeOnly libs.junit.jupiter.engine
     testRuntimeOnly libs.junit.platform.launcher
@@ -27,22 +24,35 @@ test {
     useJUnitPlatform()
 }
 
-
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
     toolchain {
         languageVersion = JavaLanguageVersion.of(11)
     }
+    withSourcesJar() // Good practice for published packages
 }
 
-javadoc {
-    options.encoding = 'UTF-8'
-}
-
-jar {
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
     }
-
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            // Dynamically targets the current repo (SteynDewald or a Fork)
+            def repo = System.getenv("GITHUB_REPOSITORY") ?: "SteynDewald/jadx-ollama-assist"
+            url = uri("https://maven.pkg.github.com/${repo}")
+            
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
 
 jacocoTestReport {
     reports {
