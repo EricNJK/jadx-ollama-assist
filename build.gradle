@@ -8,12 +8,6 @@ plugins {
 // Versioning pulled from gradle.properties
 // group and version defined there
 
-repositories {
-    google()
-    mavenCentral()
-    gradlePluginPortal()
-}
-
 dependencies {
     // compileOnly dependencies are NOT included in fat jars by default
     compileOnly libs.jadx.core
