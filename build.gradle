@@ -1,51 +1,59 @@
 plugins {
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.maven.publish)
     id 'java'
     id 'jacoco'
     alias(libs.plugins.maven.publish) // Added for publishing
 }
 
-// These will be overridden by gradle.properties if it exists
-group = 'des.ts'
-version = '1.5.1'
+// Versioning pulled from gradle.properties
+// group and version defined there
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    // compileOnly dependencies are NOT included in fat jars by default
     compileOnly libs.jadx.core
+    
     implementation libs.tomlj
+
     testImplementation libs.junit.jupiter.api
     testRuntimeOnly libs.junit.jupiter.engine
-    testRuntimeOnly libs.junit.platform.launcher
-}
-
-test {
-    useJUnitPlatform()
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
-    }
-    withSourcesJar() // Good practice for published packages
+    withSourcesJar()
+    withJavadocJar() // This automatically creates the JavaDoc JAR
+}
+
+// Configuration for the Fat Jar
+shadowJar {
+    archiveClassifier.set('all') // Names the file project-version-all.jar
+    mergeServiceFiles() // Essential if you use libraries with SPI
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            from components.java
+            // Use the shadow jar instead of the normal jar
+            artifact shadowJar
+            artifact javadocJar
+            artifact sourcesJar
+            
+            groupId = project.group
+            artifactId = project.name
+            version = project.version
         }
     }
     repositories {
         maven {
             name = "GitHubPackages"
-            // Dynamically targets the current repo (SteynDewald or a Fork)
-            def repo = System.getenv("GITHUB_REPOSITORY") ?: "SteynDewald/jadx-ollama-assist"
-            url = uri("https://maven.pkg.github.com/${repo}")
-            
+            def repoPath = System.getenv("GITHUB_REPOSITORY") ?: "SteynDewald/jadx-ollama-assist"
+            url = uri("https://maven.pkg.github.com/${repoPath}")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
@@ -54,10 +62,7 @@ publishing {
     }
 }
 
-jacocoTestReport {
-    reports {
-        xml.required = true
-        csv.required = true
-        html.required = true
-    }
+// Ensure tests and docs are generated before publishing
+tasks.withType(PublishToMavenRepository) {
+    dependsOn test, javadoc
 }
