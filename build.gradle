@@ -1,53 +1,67 @@
 plugins {
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.maven.publish)
     id 'java'
     id 'jacoco'
 }
 
-group = 'des.ts'
-version = '1.5.0'
+// Versioning pulled from gradle.properties
+// group and version defined there
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    // compileOnly dependencies are NOT included in fat jars by default
     compileOnly libs.jadx.core
-
     
-    // TOML parser (very small, no transitive junk)
     implementation libs.tomlj
 
-    // Testing
     testImplementation libs.junit.jupiter.api
     testRuntimeOnly libs.junit.jupiter.engine
-    testRuntimeOnly libs.junit.platform.launcher
 }
-
-test {
-    useJUnitPlatform()
-}
-
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
+    withSourcesJar()
+    withJavadocJar() // This automatically creates the JavaDoc JAR
+}
+
+// Configuration for the Fat Jar
+shadowJar {
+    archiveClassifier.set('all') // Names the file project-version-all.jar
+    mergeServiceFiles() // Essential if you use libraries with SPI
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            // Use the shadow jar instead of the normal jar
+            artifact shadowJar
+            artifact javadocJar
+            artifact sourcesJar
+            
+            groupId = project.group
+            artifactId = project.name
+            version = project.version
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            def repoPath = System.getenv("GITHUB_REPOSITORY") ?: "SteynDewald/jadx-ollama-assist"
+            url = uri("https://maven.pkg.github.com/${repoPath}")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
     }
 }
 
-javadoc {
-    options.encoding = 'UTF-8'
-}
-
-jar {
-    }
-
-
-jacocoTestReport {
-    reports {
-        xml.required = true
-        csv.required = true
-        html.required = true
-    }
+// Ensure tests and docs are generated before publishing
+tasks.withType(PublishToMavenRepository) {
+    dependsOn test, javadoc
 }
