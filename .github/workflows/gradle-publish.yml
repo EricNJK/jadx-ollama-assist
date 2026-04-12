@@ -1,29 +1,27 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-# This workflow will build a package using Gradle and then publish it to GitHub packages when a release is created
-# For more information see: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#Publishing-using-gradle
-
-name: CI, Publish, and Pre-Release
+name: CI, Publish, and Deploy Docs
 
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # This adds a "Run workflow" button to the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+  pages: write
+  id-token: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: Make Gradlew Executable
+      run: chmod +x gradlew
 
     - name: Set up JDK 11
       uses: actions/setup-java@v4
@@ -34,18 +32,25 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Run Tests and Generate Docs
-      # This runs your tests and builds the JavaDoc
-      run: ./gradlew test javadoc
+    - name: Build, Test and Docs
+      run: ./gradlew test javadoc shadowJar
 
-    - name: Extract Project Version
-      # Pulls the version from gradle.properties for tagging
+    # --- DEPLOY JAVADOCS TO GITHUB PAGES ---
+    - name: Upload Pages Artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: 'build/docs/javadoc'
+
+    - name: Deploy to GitHub Pages
+      uses: actions/deploy-pages@v4
+    # ---------------------------------------
+
+    - name: Extract Version
       run: |
         VERSION=$(./gradlew properties | grep ^version: | awk '{print $2}')
         echo "PROJECT_VERSION=$VERSION" >> $GITHUB_ENV
 
-    - name: Build Fat Jar and Publish
-      # This publishes to GitHub Packages
+    - name: Publish to GitHub Packages
       run: ./gradlew publish
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -58,11 +63,8 @@ jobs:
         body: |
           ## What's Changed
           Automated build for version ${{ env.PROJECT_VERSION }}.
-          
-          **Note:** This is a pre-release build.
-        draft: false
+          [View the Live API Documentation here](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/)
         prerelease: true
-        # This attaches the Fat Jar and JavaDoc Jar to the release page
         files: |
           build/libs/*-all.jar
           build/libs/*-javadoc.jar
