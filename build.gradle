@@ -5,7 +5,6 @@ plugins {
     id 'jacoco'
 }
 
-// Ensure the project version is set from gradle.properties
 version = projectVersion
 
 dependencies {
@@ -18,50 +17,54 @@ dependencies {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
-    withSourcesJar()
-    withJavadocJar() 
+    // Removed withSourcesJar() and withJavadocJar() from here 
+    // to avoid the "Double Artifact" error in the publishing block.
 }
-
-// --- Versioning & Naming Customization ---
 
 // 1. Configure the Fat Jar (Shadow)
 shadowJar {
     archiveBaseName.set("jadx-ollama-assist-plugin")
     archiveVersion.set("v${project.version}")
-    archiveClassifier.set("") // Remove the "-all" suffix
+    archiveClassifier.set("") 
     mergeServiceFiles()
 }
 
-// 2. Configure the Javadoc Jar naming
-// Note: withJavadocJar() creates the task 'javadocJar'
-tasks.named('javadocJar') {
+// 2. Configure the Javadoc Jar task
+// Ensure the javadoc task is configured before creating the jar
+tasks.register('javadocJar', Jar) {
+    dependsOn javadoc
     archiveBaseName.set("jadx-ollama-assist-javadoc")
     archiveVersion.set("v${project.version}")
-    archiveClassifier.set("") // Remove the "-javadoc" suffix from the name
+    archiveClassifier.set("javadoc") // Recommendation: Keep a classifier for docs
+    from javadoc.destinationDir
 }
 
-// 3. Disable the normal jar to prevent confusion
+// 3. Configure the Sources Jar task
+tasks.register('sourcesJar', Jar) {
+    archiveClassifier.set("sources")
+    from sourceSets.main.allSource
+}
+
+// 4. Disable the default skinny jar
 jar.enabled = false
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            // 1. This uses the Fat Jar (shadow) as the main artifact
-            artifact shadowJar 
+            // We DON'T use 'from components.java' here because we are 
+            // manually defining exactly which files to upload. 
+            // This is the safest way to avoid duplicates.
+
+            artifact shadowJar {
+                classifier = null // This makes it the main 'jadx-ollama-assist-plugin.jar'
+            }
             
-            // 2. These add the extra helper jars
             artifact javadocJar
             artifact sourcesJar
             
             groupId = project.group
-            artifactId = project.name
+            artifactId = "jadx-ollama-assist-plugin" // Match your baseName
             version = project.version
-
-            // 3. This resolves the "duplicate" error by 
-            // ensuring the pom is built correctly for the shadow jar
-            pom.withXml {
-                // Optional: You can customize your POM here if needed
-            }
         }
     }
     repositories {
@@ -76,7 +79,3 @@ publishing {
         }
     }
 }
-
-// 4. Disable the standard jar task to prevent it from conflicting
-// This ensures only the Shadow Jar is produced and published
-jar.enabled = false 
