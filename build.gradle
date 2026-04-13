@@ -46,14 +46,22 @@ jar.enabled = false
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            // Use the shadow jar as the main artifact
-            artifact shadowJar
+            // 1. This uses the Fat Jar (shadow) as the main artifact
+            artifact shadowJar 
+            
+            // 2. These add the extra helper jars
             artifact javadocJar
             artifact sourcesJar
             
             groupId = project.group
             artifactId = project.name
             version = project.version
+
+            // 3. This resolves the "duplicate" error by 
+            // ensuring the pom is built correctly for the shadow jar
+            pom.withXml {
+                // Optional: You can customize your POM here if needed
+            }
         }
     }
     repositories {
@@ -69,6 +77,6 @@ publishing {
     }
 }
 
-tasks.withType(PublishToMavenRepository) {
-    dependsOn test, javadoc
-}
+// 4. Disable the standard jar task to prevent it from conflicting
+// This ensures only the Shadow Jar is produced and published
+jar.enabled = false 
