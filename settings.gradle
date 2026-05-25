@@ -1,0 +1,17 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal() // Required for the Shadow plugin
+        mavenCentral()
+        google()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        google()
+    }
+}
+
+rootProject.name = 'jadx-ollama-assist'

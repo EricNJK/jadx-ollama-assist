@@ -1,57 +1,81 @@
 plugins {
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.maven.publish)
     id 'java'
     id 'jacoco'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
-group = 'des.ts'
-version = '1.5.0'
-
-repositories {
-    mavenCentral()
-}
+version = projectVersion
 
 dependencies {
     compileOnly libs.jadx.core
-
-    
-    // TOML parser (very small, no transitive junk)
     implementation libs.tomlj
-
-    // Testing
     testImplementation libs.junit.jupiter.api
     testRuntimeOnly libs.junit.jupiter.engine
-    testRuntimeOnly libs.junit.platform.launcher
 }
-
-test {
-    useJUnitPlatform()
-}
-
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(11)
-    }
+    // Removed withSourcesJar() and withJavadocJar() from here 
+    // to avoid the "Double Artifact" error in the publishing block.
 }
 
-javadoc {
-    options.encoding = 'UTF-8'
-}
-
+// 1. Configure the Fat Jar (Shadow)
 shadowJar {
-    archiveBaseName.set('ollama-assist')
-    archiveVersion.set('1.5.0')
-    archiveClassifier.set('')
+    archiveBaseName.set("jadx-ollama-assist-plugin")
+    archiveVersion.set("v${project.version}")
+    archiveClassifier.set("") // Use archiveClassifier.set instead of classifier
+    mergeServiceFiles()
 }
 
+// 2. Configure the Javadoc Jar task
+// Ensure the javadoc task is configured before creating the jar
+tasks.register('javadocJar', Jar) {
+    dependsOn javadoc
+    archiveBaseName.set("jadx-ollama-assist-javadoc")
+    archiveVersion.set("v${project.version}")
+    archiveClassifier.set("javadoc") // Recommendation: Keep a classifier for docs
+    from javadoc.destinationDir
+}
 
-jacocoTestReport {
-    reports {
-        xml.required = true
-        csv.required = true
-        html.required = true
+// 3. Configure the Sources Jar task
+tasks.register('sourcesJar', Jar) {
+    archiveClassifier.set("sources")
+    from sourceSets.main.allSource
+}
+
+// 4. Disable the default skinny jar
+jar.enabled = false
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            // We DON'T use 'from components.java' here because we are 
+            // manually defining exactly which files to upload. 
+            // This is the safest way to avoid duplicates.
+
+            artifact shadowJar {
+                classifier = null // This makes it the main 'jadx-ollama-assist-plugin.jar'
+            }
+            
+            artifact javadocJar
+            artifact sourcesJar
+            
+            groupId = project.group
+            artifactId = "jadx-ollama-assist-plugin" // Match your baseName
+            version = project.version
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            def repoPath = System.getenv("GITHUB_REPOSITORY") ?: "SteynDewald/jadx-ollama-assist"
+            url = uri("https://maven.pkg.github.com/${repoPath}")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
     }
 }
