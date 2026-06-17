@@ -62,7 +62,7 @@ Configuration is saved in `~/.ollama/ollama.toml`.
 
 ## Development
 
-- Build: `./gradlew jar`
+- Build: `./gradlew shadowJar`
 - Tests: `./gradlew test`
 
 ## Release

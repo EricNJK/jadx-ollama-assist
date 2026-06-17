@@ -29,7 +29,7 @@ public class OllamaConfigManager {
             Files.createDirectories(configFile.getParent());
         }
         if (!Files.exists(configFile)) {
-            Files.write(configFile, ("endpoint = \"" + OllamaConfig.defaults().endpoint() + "\"\nmodel = \"" + OllamaConfig.defaults().model() + "\"\ntemperature = " + OllamaConfig.defaults().temperature() + "\n").getBytes());
+            Files.write(configFile, ("ollama.endpoint = \"" + OllamaConfig.defaults().endpoint() + "\"\nollama.model = \"" + OllamaConfig.defaults().model() + "\"\nollama.temperature = " + OllamaConfig.defaults().temperature() + "\n").getBytes());
         }
         
         reload();
@@ -105,10 +105,12 @@ public class OllamaConfigManager {
             }
             String text = new String(Files.readAllBytes(configFile));
             
-            text = replaceOrAppend(text, "endpoint", "\"" + newConfig.endpoint() + "\"");
-            text = replaceOrAppend(text, "model", "\"" + newConfig.model() + "\"");
-            text = replaceOrAppend(text, "temperature", String.valueOf(newConfig.temperature()));
-            
+            text = replaceOrAppend(text, "ollama.endpoint", "\"" + newConfig.endpoint() + "\"");
+            text = replaceOrAppend(text, "ollama.model", "\"" + newConfig.model() + "\"");
+            text = replaceOrAppend(text, "ollama.temperature", String.valueOf(newConfig.temperature()));
+            text = replaceOrAppend(text, "ollama.timeout_ms", String.valueOf(newConfig.timeoutMs()));
+            text = replaceOrAppend(text, "prompts.base",  "\"" + newConfig.basePrompt() + "\"");
+
             Files.write(configFile, text.getBytes());
             current.set(newConfig);
         } catch (IOException e) {

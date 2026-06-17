@@ -6,6 +6,7 @@ import org.tomlj.TomlParseResult;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /**
  * Utility for loading and parsing the Ollama TOML configuration file.
@@ -34,12 +35,25 @@ throws IOException {
             throw new IOException("Invalid TOML: " + toml.errors());
         }
 
+        OllamaConfig defaults = OllamaConfig.defaults();
+
+        String endpoint = Objects.requireNonNullElse(
+                toml.getString("ollama.endpoint"), defaults.endpoint());
+        String model = Objects.requireNonNullElse(
+                toml.getString("ollama.model"), defaults.model());
+        Long timeoutMs = Objects.requireNonNullElse(
+                toml.getLong("ollama.timeout_ms"), (long) defaults.timeoutMs());
+        Double temperature = Objects.requireNonNullElse(
+                toml.getDouble("ollama.temperature"), defaults.temperature());
+        String basePrompt = Objects.requireNonNullElse(
+                toml.getString("prompts.base"), defaults.basePrompt());
+
         return new OllamaConfig(
-            toml.getString("ollama.endpoint"),
-            toml.getString("ollama.model"),
-            toml.getLong("ollama.timeout_ms").intValue(),
-            toml.getDouble("ollama.temperature"),
-            toml.getString("prompts.base")
+            endpoint,
+            model,
+            timeoutMs.intValue(),
+            temperature,
+            basePrompt
         );
     }
 }
